@@ -1,6 +1,7 @@
 
 package rw.university.sims.student;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -16,6 +17,7 @@ public class Student {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
     @NotBlank(message = "Student number is required")
     @Size(max = 20, message = "Student number must not exceed 20 characters")
     private String studentNumber;
@@ -28,6 +30,7 @@ public class Student {
     @Size(max = 50, message = "Last name must not exceed 50 characters")
     private String lastName;
 
+    @Column(nullable = false, unique = true)
     @NotBlank(message = "Email is required")
     @Email(message = "Please provide a valid email address")
     @Size(max = 100, message = "Email must not exceed 100 characters")

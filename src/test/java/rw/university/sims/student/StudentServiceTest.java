@@ -28,6 +28,7 @@ class StudentServiceTest {
         studentService = new StudentService(studentRepository);
     }
 
+
     @Test
     void shouldCreateStudent() {
         Student student = new Student(
@@ -35,6 +36,10 @@ class StudentServiceTest {
                 "elior@example.com"
         );
 
+        when(studentRepository.existsByStudentNumber("SIMS001"))
+                .thenReturn(false);
+        when(studentRepository.existsByEmail("elior@example.com"))
+                .thenReturn(false);
         when(studentRepository.save(student)).thenReturn(student);
 
         Student result = studentService.createStudent(student);
@@ -42,6 +47,7 @@ class StudentServiceTest {
         assertEquals("SIMS001", result.getStudentNumber());
         verify(studentRepository).save(student);
     }
+
 
     @Test
     void shouldReturnAllStudents() {
@@ -75,10 +81,51 @@ class StudentServiceTest {
         verify(studentRepository).findById(1L);
     }
 
+
     @Test
     void shouldDeleteStudent() {
         studentService.deleteStudent(1L);
 
         verify(studentRepository).deleteById(1L);
+    }
+
+    @Test
+    void shouldRejectDuplicateStudentNumber() {
+        Student student = new Student(
+                null, "SIMS001", "Alex", "Smith",
+                "alex@example.com"
+        );
+
+        when(studentRepository.existsByStudentNumber("SIMS001"))
+                .thenReturn(true);
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> studentService.createStudent(student)
+        );
+
+        verify(studentRepository, org.mockito.Mockito.never())
+                .save(student);
+    }
+
+    @Test
+    void shouldRejectDuplicateEmail() {
+        Student student = new Student(
+                null, "SIMS002", "Alex", "Smith",
+                "elior@example.com"
+        );
+
+        when(studentRepository.existsByStudentNumber("SIMS002"))
+                .thenReturn(false);
+        when(studentRepository.existsByEmail("elior@example.com"))
+                .thenReturn(true);
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> studentService.createStudent(student)
+        );
+
+        verify(studentRepository, org.mockito.Mockito.never())
+                .save(student);
     }
 }

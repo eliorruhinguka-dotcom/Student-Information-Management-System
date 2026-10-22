@@ -16,6 +16,18 @@ public class StudentService {
     }
 
     public Student createStudent(Student student) {
+
+        if (studentRepository.existsByStudentNumber(
+                student.getStudentNumber())) {
+            throw new IllegalArgumentException(
+                    "Student number already exists");
+        }
+
+        if (studentRepository.existsByEmail(student.getEmail())) {
+            throw new IllegalArgumentException(
+                    "Email address already exists");
+        }
+
         return studentRepository.save(student);
     }
 
