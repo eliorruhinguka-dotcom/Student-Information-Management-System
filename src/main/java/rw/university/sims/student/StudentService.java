@@ -2,6 +2,7 @@
 package rw.university.sims.student;
 
 import org.springframework.stereotype.Service;
+import rw.university.sims.ResourceNotFoundException;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +38,22 @@ public class StudentService {
 
     public Optional<Student> getStudentById(Long id) {
         return studentRepository.findById(id);
+    }
+
+    public Student updateStudentStatus(Long id, StudentStatus newStatus) {
+
+        if (newStatus == null) {
+            throw new IllegalArgumentException(
+                    "Student status is required");
+        }
+
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Student not found with id: " + id));
+
+        student.setStatus(newStatus);
+
+        return studentRepository.save(student);
     }
 
     public void deleteStudent(Long id) {

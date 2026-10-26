@@ -3,38 +3,51 @@ package rw.university.sims.student;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 @Entity
+@Table(name = "student")
 public class Student {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
     @NotBlank(message = "Student number is required")
     @Size(max = 20, message = "Student number must not exceed 20 characters")
+    @Column(name = "student_number", nullable = false, unique = true, length = 20)
     private String studentNumber;
 
     @NotBlank(message = "First name is required")
     @Size(max = 50, message = "First name must not exceed 50 characters")
+    @Column(name = "first_name", nullable = false, length = 50)
     private String firstName;
 
     @NotBlank(message = "Last name is required")
     @Size(max = 50, message = "Last name must not exceed 50 characters")
+    @Column(name = "last_name", nullable = false, length = 50)
     private String lastName;
 
-    @Column(nullable = false, unique = true)
     @NotBlank(message = "Email is required")
     @Email(message = "Please provide a valid email address")
     @Size(max = 100, message = "Email must not exceed 100 characters")
+    @Column(nullable = false, unique = true, length = 100)
     private String email;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private StudentStatus status = StudentStatus.ACTIVE;
+
+    @Column(name = "semester_fee_paid_percentage", nullable = false)
+    private double semesterFeePaidPercentage = 0.0;
 
     public Student() {
     }
@@ -86,5 +99,21 @@ public class Student {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public StudentStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(StudentStatus status) {
+        this.status = status;
+    }
+
+    public double getSemesterFeePaidPercentage() {
+        return semesterFeePaidPercentage;
+    }
+
+    public void setSemesterFeePaidPercentage(double semesterFeePaidPercentage) {
+        this.semesterFeePaidPercentage = semesterFeePaidPercentage;
     }
 }
