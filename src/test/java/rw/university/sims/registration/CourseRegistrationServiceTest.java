@@ -1,3 +1,4 @@
+
 package rw.university.sims.registration;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +14,7 @@ import rw.university.sims.student.Student;
 import rw.university.sims.student.StudentRepository;
 import rw.university.sims.student.StudentStatus;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,6 +26,7 @@ class CourseRegistrationServiceTest {
 
     private static final Long STUDENT_ID = 1L;
     private static final Long OFFERING_ID = 10L;
+    private static final Long REGISTRATION_ID = 100L;
 
     @Mock
     private CourseRegistrationRepository registrationRepository;
@@ -58,22 +61,27 @@ class CourseRegistrationServiceTest {
                         courseOfferingRepository.findByIdForUpdate(OFFERING_ID))
                 .thenReturn(Optional.of(offering));
 
+        lenient().when(offering.getId())
+                .thenReturn(OFFERING_ID);
+
         lenient().when(offering.getCapacity())
                 .thenReturn(30);
 
-        lenient().when(
-                        registrationRepository
-                                .existsByStudent_IdAndCourseOffering_Id(
-                                        STUDENT_ID, OFFERING_ID))
+        lenient().when(registrationRepository
+                        .existsByStudent_IdAndCourseOffering_IdAndStatus(
+                                STUDENT_ID,
+                                OFFERING_ID,
+                                RegistrationStatus.REGISTERED))
                 .thenReturn(false);
 
-        lenient().when(
-                        registrationRepository.countByCourseOffering_Id(
-                                OFFERING_ID))
+        lenient().when(registrationRepository
+                        .countByCourseOffering_IdAndStatus(
+                                OFFERING_ID,
+                                RegistrationStatus.REGISTERED))
                 .thenReturn(5L);
 
-        lenient().when(
-                        registrationRepository.save(any(CourseRegistration.class)))
+        lenient().when(registrationRepository
+                        .save(any(CourseRegistration.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -86,7 +94,9 @@ class CourseRegistrationServiceTest {
         assertNotNull(result);
         assertSame(student, result.getStudent());
         assertSame(offering, result.getCourseOffering());
+        assertEquals(RegistrationStatus.REGISTERED, result.getStatus());
         assertNotNull(result.getRegisteredAt());
+        assertNull(result.getCancelledAt());
 
         verify(registrationRepository)
                 .save(any(CourseRegistration.class));
@@ -122,8 +132,10 @@ class CourseRegistrationServiceTest {
     @Test
     void shouldRejectDuplicateRegistration() {
         when(registrationRepository
-                .existsByStudent_IdAndCourseOffering_Id(
-                        STUDENT_ID, OFFERING_ID))
+                .existsByStudent_IdAndCourseOffering_IdAndStatus(
+                        STUDENT_ID,
+                        OFFERING_ID,
+                        RegistrationStatus.REGISTERED))
                 .thenReturn(true);
 
         assertThrows(
@@ -137,7 +149,10 @@ class CourseRegistrationServiceTest {
 
     @Test
     void shouldRejectRegistrationWhenOfferingIsFull() {
-        when(registrationRepository.countByCourseOffering_Id(OFFERING_ID))
+        when(registrationRepository
+                .countByCourseOffering_IdAndStatus(
+                        OFFERING_ID,
+                        RegistrationStatus.REGISTERED))
                 .thenReturn(30L);
 
         assertThrows(
@@ -172,6 +187,60 @@ class CourseRegistrationServiceTest {
                 ResourceNotFoundException.class,
                 () -> registrationService.registerStudent(
                         STUDENT_ID, OFFERING_ID));
+
+        verify(registrationRepository, never())
+                .save(any(CourseRegistration.class));
+    }
+
+    @Test
+    void shouldCancelRegistrationAndRecordCancellationTime() {
+        CourseRegistration registration =
+                new CourseRegistration(student, offering);
+
+        when(registrationRepository.findById(REGISTRATION_ID))
+                .thenReturn(Optional.of(registration));
+
+        CourseRegistration result =
+                registrationService.cancelRegistration(REGISTRATION_ID);
+
+        assertEquals(RegistrationStatus.CANCELLED, result.getStatus());
+        assertNotNull(result.getCancelledAt());
+
+        verify(courseOfferingRepository)
+                .findByIdForUpdate(OFFERING_ID);
+
+        verify(registrationRepository).save(registration);
+    }
+
+    @Test
+    void shouldRejectCancellationWhenAlreadyCancelled() {
+        CourseRegistration registration =
+                new CourseRegistration(student, offering);
+
+        registration.setStatus(RegistrationStatus.CANCELLED);
+        registration.setCancelledAt(LocalDateTime.now());
+
+        when(registrationRepository.findById(REGISTRATION_ID))
+                .thenReturn(Optional.of(registration));
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> registrationService.cancelRegistration(
+                        REGISTRATION_ID));
+
+        verify(registrationRepository, never())
+                .save(any(CourseRegistration.class));
+    }
+
+    @Test
+    void shouldRejectCancellationWhenRegistrationDoesNotExist() {
+        when(registrationRepository.findById(REGISTRATION_ID))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> registrationService.cancelRegistration(
+                        REGISTRATION_ID));
 
         verify(registrationRepository, never())
                 .save(any(CourseRegistration.class));

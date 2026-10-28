@@ -6,6 +6,8 @@ public record CourseRegistrationResponse(
         Long id,
         Long studentId,
         Long courseOfferingId,
-        LocalDateTime registeredAt
+        LocalDateTime registeredAt,
+        RegistrationStatus status,
+        LocalDateTime cancelledAt
 ) {
 }

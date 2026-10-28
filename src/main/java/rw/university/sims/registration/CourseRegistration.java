@@ -2,6 +2,8 @@ package rw.university.sims.registration;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -9,20 +11,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import rw.university.sims.course.CourseOffering;
 import rw.university.sims.student.Student;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name = "course_registrations",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_registration_student_offering",
-                columnNames = {"student_id", "course_offering_id"}
-        )
-)
+@Table(name = "course_registrations")
 public class CourseRegistration {
 
     @Id
@@ -40,6 +35,13 @@ public class CourseRegistration {
     @Column(name = "registered_at", nullable = false)
     private LocalDateTime registeredAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private RegistrationStatus status = RegistrationStatus.REGISTERED;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
     public CourseRegistration() {
     }
 
@@ -49,6 +51,8 @@ public class CourseRegistration {
         this.student = student;
         this.courseOffering = courseOffering;
         this.registeredAt = LocalDateTime.now();
+        this.status = RegistrationStatus.REGISTERED;
+        this.cancelledAt = null;
     }
 
     public Long getId() {
@@ -77,5 +81,21 @@ public class CourseRegistration {
 
     public void setRegisteredAt(LocalDateTime registeredAt) {
         this.registeredAt = registeredAt;
+    }
+
+    public RegistrationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(RegistrationStatus status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getCancelledAt() {
+        return cancelledAt;
+    }
+
+    public void setCancelledAt(LocalDateTime cancelledAt) {
+        this.cancelledAt = cancelledAt;
     }
 }

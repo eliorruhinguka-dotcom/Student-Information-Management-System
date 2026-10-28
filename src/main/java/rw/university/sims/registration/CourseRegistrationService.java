@@ -1,3 +1,4 @@
+
 package rw.university.sims.registration;
 
 import org.springframework.stereotype.Service;
@@ -9,6 +10,7 @@ import rw.university.sims.student.Student;
 import rw.university.sims.student.StudentRepository;
 import rw.university.sims.student.StudentStatus;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -49,30 +51,64 @@ public class CourseRegistrationService {
                     "At least 30% of semester fees must be paid");
         }
 
-        CourseOffering offering =
+        CourseOffering courseOffering =
                 courseOfferingRepository.findByIdForUpdate(courseOfferingId)
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 "Course offering not found with id: "
                                         + courseOfferingId));
 
-        if (registrationRepository
-                .existsByStudent_IdAndCourseOffering_Id(
-                        studentId, courseOfferingId)) {
+        boolean alreadyRegistered =
+                registrationRepository
+                        .existsByStudent_IdAndCourseOffering_IdAndStatus(
+                                studentId,
+                                courseOfferingId,
+                                RegistrationStatus.REGISTERED);
+
+        if (alreadyRegistered) {
             throw new IllegalArgumentException(
                     "Student is already registered for this course");
         }
 
         long currentRegistrations =
-                registrationRepository.countByCourseOffering_Id(
-                        courseOfferingId);
+                registrationRepository.countByCourseOffering_IdAndStatus(
+                        courseOfferingId,
+                        RegistrationStatus.REGISTERED);
 
-        if (currentRegistrations >= offering.getCapacity()) {
+        if (currentRegistrations >= courseOffering.getCapacity()) {
             throw new IllegalArgumentException(
                     "Course offering has reached its capacity");
         }
 
         CourseRegistration registration =
-                new CourseRegistration(student, offering);
+                new CourseRegistration(student, courseOffering);
+
+        return registrationRepository.save(registration);
+    }
+
+    @Transactional
+    public CourseRegistration cancelRegistration(Long registrationId) {
+        CourseRegistration registration =
+                registrationRepository.findById(registrationId)
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "Registration not found with id: "
+                                        + registrationId));
+
+        Long courseOfferingId =
+                registration.getCourseOffering().getId();
+
+        // Lock the course offering while cancellation is processed.
+        courseOfferingRepository.findByIdForUpdate(courseOfferingId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Course offering not found with id: "
+                                + courseOfferingId));
+
+        if (registration.getStatus() == RegistrationStatus.CANCELLED) {
+            throw new IllegalArgumentException(
+                    "Registration is already cancelled");
+        }
+
+        registration.setStatus(RegistrationStatus.CANCELLED);
+        registration.setCancelledAt(LocalDateTime.now());
 
         return registrationRepository.save(registration);
     }

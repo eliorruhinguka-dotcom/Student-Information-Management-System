@@ -1,3 +1,4 @@
+
 package rw.university.sims.registration;
 
 import jakarta.validation.Valid;
@@ -46,6 +47,16 @@ public class CourseRegistrationController {
                 registrationService.getRegistrationById(id));
     }
 
+    @PatchMapping("/{id}/cancel")
+    public CourseRegistrationResponse cancelRegistration(
+            @PathVariable Long id) {
+
+        CourseRegistration registration =
+                registrationService.cancelRegistration(id);
+
+        return toResponse(registration);
+    }
+
     private CourseRegistrationResponse toResponse(
             CourseRegistration registration) {
 
@@ -53,6 +64,8 @@ public class CourseRegistrationController {
                 registration.getId(),
                 registration.getStudent().getId(),
                 registration.getCourseOffering().getId(),
-                registration.getRegisteredAt());
+                registration.getRegisteredAt(),
+                registration.getStatus(),
+                registration.getCancelledAt());
     }
 }
