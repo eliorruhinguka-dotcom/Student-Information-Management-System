@@ -1,4 +1,3 @@
-
 package rw.university.sims.registration;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -104,7 +103,8 @@ class CourseRegistrationServiceTest {
 
     @Test
     void shouldRejectStudentWhoIsNotActive() {
-        when(student.getStatus()).thenReturn(StudentStatus.SUSPENDED);
+        when(student.getStatus())
+                .thenReturn(StudentStatus.SUSPENDED);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -243,6 +243,35 @@ class CourseRegistrationServiceTest {
                         REGISTRATION_ID));
 
         verify(registrationRepository, never())
+                .save(any(CourseRegistration.class));
+    }
+
+    @Test
+    void shouldAllowRegistrationAgainAfterPreviousRegistrationWasCancelled() {
+        // The repository reports no active registration for this student
+        // and course offering, because the previous one was cancelled.
+        when(registrationRepository
+                .existsByStudent_IdAndCourseOffering_IdAndStatus(
+                        STUDENT_ID,
+                        OFFERING_ID,
+                        RegistrationStatus.REGISTERED))
+                .thenReturn(false);
+
+        when(registrationRepository
+                .countByCourseOffering_IdAndStatus(
+                        OFFERING_ID,
+                        RegistrationStatus.REGISTERED))
+                .thenReturn(5L);
+
+        CourseRegistration result =
+                registrationService.registerStudent(
+                        STUDENT_ID, OFFERING_ID);
+
+        assertNotNull(result);
+        assertEquals(RegistrationStatus.REGISTERED, result.getStatus());
+        assertNull(result.getCancelledAt());
+
+        verify(registrationRepository)
                 .save(any(CourseRegistration.class));
     }
 }
