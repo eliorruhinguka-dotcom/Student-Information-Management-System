@@ -6,15 +6,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import rw.university.sims.enums.RegistrationStatus;
-import rw.university.sims.exception.ResourceNotFoundException;
+
 import rw.university.sims.entity.CourseOffering;
-import rw.university.sims.repository.CourseOfferingRepository;
 import rw.university.sims.entity.CourseRegistration;
 import rw.university.sims.entity.Student;
+import rw.university.sims.enums.RegistrationStatus;
+import rw.university.sims.enums.StudentStatus;
+import rw.university.sims.exception.ResourceNotFoundException;
+import rw.university.sims.repository.CourseOfferingRepository;
 import rw.university.sims.repository.CourseRegistrationRepository;
 import rw.university.sims.repository.StudentRepository;
-import rw.university.sims.enums.StudentStatus;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -206,7 +207,10 @@ class CourseRegistrationServiceTest {
         CourseRegistration result =
                 registrationService.cancelRegistration(REGISTRATION_ID);
 
-        assertEquals(RegistrationStatus.CANCELLED, result.getStatus());
+        assertEquals(
+                RegistrationStatus.CANCELLED,
+                result.getStatus());
+
         assertNotNull(result.getCancelledAt());
 
         verify(courseOfferingRepository)
@@ -250,31 +254,60 @@ class CourseRegistrationServiceTest {
     }
 
     @Test
-    void shouldAllowRegistrationAgainAfterPreviousRegistrationWasCancelled() {
-        // The repository reports no active registration for this student
-        // and course offering, because the previous one was cancelled.
+    void shouldAllowRegistrationAgainAfterCancellingPreviousRegistration() {
+        CourseRegistration previousRegistration =
+                new CourseRegistration(student, offering);
+
+        when(registrationRepository.findById(REGISTRATION_ID))
+                .thenReturn(Optional.of(previousRegistration));
+
+        // A cancelled registration must not count as active.
         when(registrationRepository
                 .existsByStudent_IdAndCourseOffering_IdAndStatus(
                         STUDENT_ID,
                         OFFERING_ID,
                         RegistrationStatus.REGISTERED))
-                .thenReturn(false);
+                .thenAnswer(invocation ->
+                        previousRegistration.getStatus()
+                                == RegistrationStatus.REGISTERED);
 
         when(registrationRepository
                 .countByCourseOffering_IdAndStatus(
                         OFFERING_ID,
                         RegistrationStatus.REGISTERED))
-                .thenReturn(5L);
+                .thenAnswer(invocation ->
+                        previousRegistration.getStatus()
+                                == RegistrationStatus.REGISTERED
+                                ? 1L : 0L);
 
-        CourseRegistration result =
+        // First, cancel the previous registration.
+        CourseRegistration cancelled =
+                registrationService.cancelRegistration(REGISTRATION_ID);
+
+        assertEquals(
+                RegistrationStatus.CANCELLED,
+                cancelled.getStatus());
+
+        assertNotNull(cancelled.getCancelledAt());
+
+        // Then register the same student for the same offering again.
+        CourseRegistration newRegistration =
                 registrationService.registerStudent(
                         STUDENT_ID, OFFERING_ID);
 
-        assertNotNull(result);
-        assertEquals(RegistrationStatus.REGISTERED, result.getStatus());
-        assertNull(result.getCancelledAt());
+        assertNotSame(previousRegistration, newRegistration);
 
-        verify(registrationRepository)
+        assertEquals(
+                RegistrationStatus.CANCELLED,
+                previousRegistration.getStatus());
+
+        assertEquals(
+                RegistrationStatus.REGISTERED,
+                newRegistration.getStatus());
+
+        assertNull(newRegistration.getCancelledAt());
+
+        verify(registrationRepository, times(2))
                 .save(any(CourseRegistration.class));
     }
 }
