@@ -1,4 +1,11 @@
 package rw.university.sims.registration;
 
-public class CourseRegistrationResponse {
+import java.time.LocalDateTime;
+
+public record CourseRegistrationResponse(
+        Long id,
+        Long studentId,
+        Long courseOfferingId,
+        LocalDateTime registeredAt
+) {
 }
