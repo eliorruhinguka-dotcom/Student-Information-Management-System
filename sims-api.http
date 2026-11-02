@@ -1,0 +1,18 @@
+@baseUrl = http://localhost:8080
+@username = user
+@password = a651d179-ef61-4475-bb28-1db4bcc379d8
+
+### 1. Get all students
+GET {{baseUrl}}/api/students
+Authorization: Basic {{username}} {{password}}
+Accept: application/json
+
+### 2. Get all registrations
+GET {{baseUrl}}/api/registrations
+Authorization: Basic {{username}} {{password}}
+Accept: application/json
+
+### 3. Get one registration
+GET {{baseUrl}}/api/registrations/1
+Authorization: Basic {{username}} {{password}}
+Accept: application/json
