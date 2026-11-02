@@ -1,60 +1,67 @@
-
 package rw.university.sims.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import rw.university.sims.enums.StudentStatus;
 
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+
 @Entity
 @Table(name = "student")
 public class Student {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "Student number is required")
-    @Size(max = 20, message = "Student number must not exceed 20 characters")
-    @Column(name = "student_number", nullable = false, unique = true, length = 20)
+    // Keep the Java property name for compatibility; V12 renames the DB column.
+    @NotBlank
+    @Size(max = 20)
+    @Column(name = "registration_number", nullable = false, unique = true, length = 20)
     private String studentNumber;
 
-    @NotBlank(message = "First name is required")
-    @Size(max = 50, message = "First name must not exceed 50 characters")
+    @NotBlank @Size(max = 50)
     @Column(name = "first_name", nullable = false, length = 50)
     private String firstName;
 
-    @NotBlank(message = "Last name is required")
-    @Size(max = 50, message = "Last name must not exceed 50 characters")
+    @NotBlank @Size(max = 50)
     @Column(name = "last_name", nullable = false, length = 50)
     private String lastName;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Please provide a valid email address")
-    @Size(max = 100, message = "Email must not exceed 100 characters")
-    @Column(nullable = false, unique = true, length = 100)
+    @NotBlank @Email @Size(max = 100)
+    @Column(nullable = false, length = 100)
     private String email;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Column(name = "national_id", length = 30)
+    private String nationalId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "programme_id", nullable = true)
+    private Programme programme;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private StudentStatus status = StudentStatus.ACTIVE;
 
+    // Deprecated legacy column retained for older services until the later cleanup migration.
     @Column(name = "semester_fee_paid_percentage", nullable = false)
     private double semesterFeePaidPercentage = 0.0;
 
-    public Student() {
-    }
+    @Column(name = "admitted_at", nullable = false)
+    private OffsetDateTime admittedAt;
 
-    public Student(Long id, String studentNumber, String firstName,
-                   String lastName, String email) {
+    @Version
+    @Column(nullable = false)
+    private Long version = 0L;
+
+    public Student() {}
+
+    public Student(Long id, String studentNumber, String firstName, String lastName, String email) {
         this.id = id;
         this.studentNumber = studentNumber;
         this.firstName = firstName;
@@ -62,59 +69,34 @@ public class Student {
         this.email = email;
     }
 
-    public Long getId() {
-        return id;
+    @PrePersist
+    void initialiseAdmittedAt() {
+        if (admittedAt == null) admittedAt = OffsetDateTime.now();
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getStudentNumber() {
-        return studentNumber;
-    }
-
-    public void setStudentNumber(String studentNumber) {
-        this.studentNumber = studentNumber;
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public StudentStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(StudentStatus status) {
-        this.status = status;
-    }
-
-    public double getSemesterFeePaidPercentage() {
-        return semesterFeePaidPercentage;
-    }
-
-    public void setSemesterFeePaidPercentage(double semesterFeePaidPercentage) {
-        this.semesterFeePaidPercentage = semesterFeePaidPercentage;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getStudentNumber() { return studentNumber; }
+    public void setStudentNumber(String studentNumber) { this.studentNumber = studentNumber; }
+    public String getRegistrationNumber() { return studentNumber; }
+    public void setRegistrationNumber(String registrationNumber) { this.studentNumber = registrationNumber; }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public LocalDate getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+    public String getNationalId() { return nationalId; }
+    public void setNationalId(String nationalId) { this.nationalId = nationalId; }
+    public Programme getProgramme() { return programme; }
+    public void setProgramme(Programme programme) { this.programme = programme; }
+    public StudentStatus getStatus() { return status; }
+    public void setStatus(StudentStatus status) { this.status = status; }
+    public double getSemesterFeePaidPercentage() { return semesterFeePaidPercentage; }
+    public void setSemesterFeePaidPercentage(double value) { this.semesterFeePaidPercentage = value; }
+    public OffsetDateTime getAdmittedAt() { return admittedAt; }
+    public void setAdmittedAt(OffsetDateTime admittedAt) { this.admittedAt = admittedAt; }
+    public Long getVersion() { return version; }
 }
