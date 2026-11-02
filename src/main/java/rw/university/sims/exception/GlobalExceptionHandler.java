@@ -19,13 +19,13 @@ public class GlobalExceptionHandler {
         int status = exception.getStatusCode().value();
 
         return ResponseEntity.status(status).body(
-            GenericResponse.error(
-                status,
-                "REQUEST_FAILED",
-                exception.getReason() == null
-                    ? "The request could not be completed"
-                    : exception.getReason()
-            )
+                GenericResponse.error(
+                        status,
+                        "REQUEST_FAILED",
+                        exception.getReason() == null
+                                ? "The request could not be completed"
+                                : exception.getReason()
+                )
         );
     }
 
@@ -34,20 +34,20 @@ public class GlobalExceptionHandler {
             MethodArgumentNotValidException exception) {
 
         String message = exception.getBindingResult()
-            .getFieldErrors()
-            .stream()
-            .findFirst()
-            .map(error ->
-                error.getField() + ": " + error.getDefaultMessage()
-            )
-            .orElse("Request validation failed");
+                .getFieldErrors()
+                .stream()
+                .findFirst()
+                .map(error ->
+                        error.getField() + ": " + error.getDefaultMessage()
+                )
+                .orElse("Request validation failed");
 
         return ResponseEntity.badRequest().body(
-            GenericResponse.error(
-                400,
-                "VALIDATION_ERROR",
-                message
-            )
+                GenericResponse.error(
+                        400,
+                        "VALIDATION_ERROR",
+                        message
+                )
         );
     }
 
@@ -56,11 +56,11 @@ public class GlobalExceptionHandler {
             IllegalArgumentException exception) {
 
         return ResponseEntity.badRequest().body(
-            GenericResponse.error(
-                400,
-                "VALIDATION_ERROR",
-                exception.getMessage()
-            )
+                GenericResponse.error(
+                        400,
+                        "VALIDATION_ERROR",
+                        exception.getMessage()
+                )
         );
     }
 
@@ -69,11 +69,24 @@ public class GlobalExceptionHandler {
             ResourceNotFoundException exception) {
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            GenericResponse.error(
-                404,
-                "RESOURCE_NOT_FOUND",
-                exception.getMessage()
-            )
+                GenericResponse.error(
+                        404,
+                        "RESOURCE_NOT_FOUND",
+                        exception.getMessage()
+                )
+        );
+    }
+
+    @ExceptionHandler(ResourceConflictException.class)
+    public ResponseEntity<GenericResponse<Void>> handleConflict(
+            ResourceConflictException exception) {
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                GenericResponse.error(
+                        409,
+                        "RESOURCE_CONFLICT",
+                        exception.getMessage()
+                )
         );
     }
 }

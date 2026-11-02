@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+
 @Service
 public class AuditService {
 
@@ -28,14 +30,42 @@ public class AuditService {
             String correlationId) {
 
         AuditLog entry = new AuditLog(
-            actor,
-            action,
-            entityType,
-            entityId,
-            outcome,
-            ipAddress,
-            correlationId
+                actor,
+                action,
+                entityType,
+                entityId,
+                outcome,
+                ipAddress,
+                correlationId
         );
+
+        auditLogRepository.save(entry);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordWithValues(
+            UserAccount actor,
+            String action,
+            String entityType,
+            Long entityId,
+            String outcome,
+            String ipAddress,
+            String correlationId,
+            Map<String, Object> oldValue,
+            Map<String, Object> newValue) {
+
+        AuditLog entry = new AuditLog(
+                actor,
+                action,
+                entityType,
+                entityId,
+                outcome,
+                ipAddress,
+                correlationId
+        );
+
+        entry.setOldValue(oldValue);
+        entry.setNewValue(newValue);
 
         auditLogRepository.save(entry);
     }
