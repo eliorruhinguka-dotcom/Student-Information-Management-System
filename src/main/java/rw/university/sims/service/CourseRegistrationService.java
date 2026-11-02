@@ -1,17 +1,18 @@
-
 package rw.university.sims.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import rw.university.sims.exception.ResourceNotFoundException;
 import rw.university.sims.entity.CourseOffering;
-import rw.university.sims.enums.RegistrationStatus;
-import rw.university.sims.repository.CourseOfferingRepository;
 import rw.university.sims.entity.CourseRegistration;
 import rw.university.sims.entity.Student;
+import rw.university.sims.enums.OfferingStatus;
+import rw.university.sims.enums.RegistrationStatus;
+import rw.university.sims.enums.StudentStatus;
+import rw.university.sims.repository.CourseOfferingRepository;
 import rw.university.sims.repository.CourseRegistrationRepository;
 import rw.university.sims.repository.StudentRepository;
-import rw.university.sims.enums.StudentStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +30,7 @@ public class CourseRegistrationService {
             CourseRegistrationRepository registrationRepository,
             StudentRepository studentRepository,
             CourseOfferingRepository courseOfferingRepository) {
+
         this.registrationRepository = registrationRepository;
         this.studentRepository = studentRepository;
         this.courseOfferingRepository = courseOfferingRepository;
@@ -60,6 +62,12 @@ public class CourseRegistrationService {
                                 "Course offering not found with id: "
                                         + courseOfferingId));
 
+        if (courseOffering.getStatus() != null
+                && courseOffering.getStatus() != OfferingStatus.OPEN) {
+            throw new IllegalArgumentException(
+                    "Students can only register for OPEN course offerings");
+        }
+
         boolean alreadyRegistered =
                 registrationRepository
                         .existsByStudent_IdAndCourseOffering_IdAndStatus(
@@ -85,11 +93,19 @@ public class CourseRegistrationService {
         CourseRegistration registration =
                 new CourseRegistration(student, courseOffering);
 
+        // The offering row is locked. Update its stored seat count
+        // in the same transaction as the registration.
+        courseOffering.setRegisteredCount(
+                Math.toIntExact(currentRegistrations + 1)
+        );
+        courseOfferingRepository.save(courseOffering);
+
         return registrationRepository.save(registration);
     }
 
     @Transactional
     public CourseRegistration cancelRegistration(Long registrationId) {
+
         CourseRegistration registration =
                 registrationRepository.findById(registrationId)
                         .orElseThrow(() -> new ResourceNotFoundException(
@@ -99,16 +115,27 @@ public class CourseRegistrationService {
         Long courseOfferingId =
                 registration.getCourseOffering().getId();
 
-        // Lock the course offering while cancellation is processed.
-        courseOfferingRepository.findByIdForUpdate(courseOfferingId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Course offering not found with id: "
-                                + courseOfferingId));
+        CourseOffering courseOffering =
+                courseOfferingRepository.findByIdForUpdate(courseOfferingId)
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "Course offering not found with id: "
+                                        + courseOfferingId));
 
         if (registration.getStatus() == RegistrationStatus.CANCELLED) {
             throw new IllegalArgumentException(
                     "Registration is already cancelled");
         }
+
+        long currentRegistrations =
+                registrationRepository.countByCourseOffering_IdAndStatus(
+                        courseOfferingId,
+                        RegistrationStatus.REGISTERED);
+
+        courseOffering.setRegisteredCount(
+                Math.toIntExact(Math.max(0, currentRegistrations - 1))
+        );
+
+        courseOfferingRepository.save(courseOffering);
 
         registration.setStatus(RegistrationStatus.CANCELLED);
         registration.setCancelledAt(LocalDateTime.now());
