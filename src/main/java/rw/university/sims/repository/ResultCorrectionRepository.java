@@ -6,6 +6,6 @@ import rw.university.sims.entity.ResultCorrection;
 import java.util.List;
 
 public interface ResultCorrectionRepository extends JpaRepository<ResultCorrection, Long> {
-    @EntityGraph(attributePaths = {"authorisedBy", "result"})
+    @EntityGraph(attributePaths = {"authorisedBy", "requestedBy", "result"})
     List<ResultCorrection> findAllByResult_IdOrderByCorrectedAtDesc(Long resultId);
 }
